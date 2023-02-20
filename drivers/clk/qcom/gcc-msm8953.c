@@ -22,6 +22,8 @@
 #include "reset.h"
 #include "vdd-level-msm8953.h"
 
+#define F_SLEW(f, s, h, m, n, sf) { (f), (s), (2 * (h) - 1), (m), (n), (sf) }
+
 static DEFINE_VDD_REGULATORS(vdd_cx, VDD_NUM, 1, vdd_corner);
 enum {
 	P_XO,
@@ -37,6 +39,7 @@ enum {
 	P_DSI0PLL_BYTE,
 	P_DSI1PLL,
 	P_DSI1PLL_BYTE,
+	P_GPLL3_OUT_MAIN_DIV
 };
 
 static struct clk_alpha_pll gpll0_early = {
@@ -129,15 +132,15 @@ static struct clk_alpha_pll gpll3_early = {
 	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_DEFAULT],
 	.vco_table = gpll3_p_vco,
 	.num_vco = ARRAY_SIZE(gpll3_p_vco),
-	.flags = SUPPORTS_DYNAMIC_UPDATE,
+	.flags = SUPPORTS_SLEW,
 	.clkr = {
 		.hw.init = &(struct clk_init_data){
 			.name = "gpll3_early",
-			.parent_names = (const char *[]){
-				"xo",
+			.parent_data = &(const struct clk_parent_data) {
+				.fw_name = "xo",
 			},
 			.num_parents = 1,
-			.ops = &clk_alpha_pll_ops,
+			.ops = &clk_alpha_pll_slew_ops,
 			.vdd_class = &vdd_cx,
 			.num_rate_max = VDD_NUM,
 			.rate_max = (unsigned long[VDD_NUM]) {
@@ -146,17 +149,15 @@ static struct clk_alpha_pll gpll3_early = {
 	},
 };
 
-static struct clk_alpha_pll_postdiv gpll3 = {
-	.offset = 0x22000,
-	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_DEFAULT],
-	.clkr.hw.init = &(struct clk_init_data){
-		.name = "gpll3",
-		.parent_names = (const char *[]){
-			"gpll3_early",
-		},
+static struct clk_fixed_factor gpll3_out_main_div = {
+	.mult = 1,
+	.div = 2,
+	.hw.init = &(struct clk_init_data){
+		.name = "gpll3_out_main_div",
+		.parent_names = (const char *[]){ "gpll3_early" },
 		.num_parents = 1,
-		.ops = &clk_alpha_pll_postdiv_ops,
 		.flags = CLK_SET_RATE_PARENT,
+		.ops = &clk_fixed_factor_ops,
 	},
 };
 
@@ -1348,7 +1349,7 @@ static struct clk_rcg2 esc1_clk_src = {
 static const struct parent_map gcc_gfx3d_map[] = {
 	{ P_XO, 0 },
 	{ P_GPLL0, 1 },
-	{ P_GPLL3, 2 },
+	{ P_GPLL3_OUT_MAIN_DIV, 2 },
 	{ P_GPLL6, 3 },
 	{ P_GPLL4, 4 },
 	{ P_GPLL0_DIV2, 5 },
@@ -1358,7 +1359,7 @@ static const struct parent_map gcc_gfx3d_map[] = {
 static const char * const gcc_gfx3d_names[] = {
 	"xo",
 	"gpll0",
-	"gpll3",
+	"gpll3_out_main_div",
 	"gpll6",
 	"gpll4",
 	"gpll0_early_div",
@@ -1366,23 +1367,23 @@ static const char * const gcc_gfx3d_names[] = {
 };
 
 static const struct freq_tbl ftbl_gfx3d_clk_src[] = {
-	F(19200000, P_XO, 1, 0, 0),
-	F(50000000, P_GPLL0_DIV2, 8, 0, 0),
-	F(80000000, P_GPLL0_DIV2, 5, 0, 0),
-	F(100000000, P_GPLL0_DIV2, 4, 0, 0),
-	F(133330000, P_GPLL0_DIV2, 3, 0, 0),
-	F(160000000, P_GPLL0_DIV2, 2.5, 0, 0),
-	F(200000000, P_GPLL0_DIV2, 2, 0, 0),
-	F(266670000, P_GPLL0, 3.0, 0, 0),
-	F(320000000, P_GPLL0, 2.5, 0, 0),
-	F(400000000, P_GPLL0, 2, 0, 0),
-	F(460800000, P_GPLL4, 2.5, 0, 0),
-	F(510000000, P_GPLL3, 2, 0, 0),
-	F(560000000, P_GPLL3, 2, 0, 0),
-	F(600000000, P_GPLL3, 2, 0, 0),
-	F(650000000, P_GPLL3, 2, 0, 0),
-	F(685000000, P_GPLL3, 2, 0, 0),
-	F(725000000, P_GPLL3, 2, 0, 0),
+	F_SLEW(19200000, P_XO, 1, 0, 0, FIXED_FREQ_SRC),
+	F_SLEW(50000000, P_GPLL0_DIV2, 8, 0, 0, FIXED_FREQ_SRC),
+	F_SLEW(80000000, P_GPLL0_DIV2, 5, 0, 0, FIXED_FREQ_SRC),
+	F_SLEW(100000000, P_GPLL0_DIV2, 4, 0, 0, FIXED_FREQ_SRC),
+	F_SLEW(133330000, P_GPLL0_DIV2, 3, 0, 0, FIXED_FREQ_SRC),
+	F_SLEW(160000000, P_GPLL0_DIV2, 2.5, 0, 0, FIXED_FREQ_SRC),
+	F_SLEW(200000000, P_GPLL0_DIV2, 2, 0, 0, FIXED_FREQ_SRC),
+	F_SLEW(266670000, P_GPLL0, 3.0, 0, 0, FIXED_FREQ_SRC),
+	F_SLEW(320000000, P_GPLL0, 2.5, 0, 0, FIXED_FREQ_SRC),
+	F_SLEW(400000000, P_GPLL0, 2, 0, 0, FIXED_FREQ_SRC),
+	F_SLEW(460800000, P_GPLL4, 2.5, 0, 0, FIXED_FREQ_SRC),
+	F_SLEW(510000000, P_GPLL3_OUT_MAIN_DIV, 1, 0, 0, 1020000000),
+	F_SLEW(560000000, P_GPLL3_OUT_MAIN_DIV, 1, 0, 0, 1120000000),
+	F_SLEW(600000000, P_GPLL3_OUT_MAIN_DIV, 1, 0, 0, 1200000000),
+	F_SLEW(650000000, P_GPLL3_OUT_MAIN_DIV, 1, 0, 0, 1300000000),
+	F_SLEW(685000000, P_GPLL3_OUT_MAIN_DIV, 1, 0, 0, 1370000000),
+	F_SLEW(725000000, P_GPLL3_OUT_MAIN_DIV, 1, 0, 0, 1450000000),
 	{ }
 };
 
@@ -4411,8 +4412,8 @@ static struct clk_regmap *gcc_msm8953_clocks[] = {
 	[GPLL0_EARLY] = &gpll0_early.clkr,
 	[GPLL2] = &gpll2.clkr,
 	[GPLL2_EARLY] = &gpll2_early.clkr,
-	[GPLL3] = &gpll3.clkr,
 	[GPLL3_EARLY] = &gpll3_early.clkr,
+	[GPLL3_OUT_MAIN_DIV] = &gpll3_out_main_div.clkr,
 	[GPLL4] = &gpll4.clkr,
 	[GPLL4_EARLY] = &gpll4_early.clkr,
 	[GPLL6] = &gpll6.clkr,
