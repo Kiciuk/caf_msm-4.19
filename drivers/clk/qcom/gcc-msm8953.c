@@ -4406,11 +4406,6 @@ static struct gdsc cpp_gdsc = {
 	.pwrsts = PWRSTS_OFF_ON,
 };
 
-static struct clk_hw *gcc_msm8953_hws[] = {
-	&gpll0_early_div.hw,
-	&gpll6_early_div.hw,
-};
-
 static struct clk_regmap *gcc_msm8953_clocks[] = {
 	[GPLL0] = &gpll0.clkr,
 	[GPLL0_EARLY] = &gpll0_early.clkr,
