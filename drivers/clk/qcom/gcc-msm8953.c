@@ -18,8 +18,6 @@
 #include "clk-branch.h"
 #include "clk-rcg.h"
 #include "common.h"
-#include "gdsc.h"
-#include "reset.h"
 #include "vdd-level-msm8953.h"
 
 #define F_SLEW(f, s, h, m, n, sf) { (f), (s), (2 * (h) - 1), (m), (n), (sf) }
@@ -4300,113 +4298,6 @@ static struct clk_branch gcc_vfe_tbu_clk = {
 	}
 };
 
-static struct gdsc usb30_gdsc = {
-	.gdscr = 0x3f078,
-	.pd = {
-		.name = "usb30_gdsc",
-	},
-	.pwrsts = PWRSTS_OFF_ON,
-	/*
-	 * FIXME: dwc3 usb gadget cannot resume after GDSC power off
-	 * dwc3 7000000.dwc3: failed to enable ep0out
-	 */
-	.flags = ALWAYS_ON,
-};
-
-static struct gdsc venus_gdsc = {
-	.gdscr = 0x4c018,
-	.cxcs = (unsigned int []){ 0x4c024, 0x4c01c },
-	.cxc_count = 2,
-	.pd = {
-		.name = "venus_gdsc",
-	},
-	.pwrsts = PWRSTS_OFF_ON,
-};
-
-static struct gdsc venus_core0_gdsc = {
-	.gdscr = 0x4c028,
-	.cxcs = (unsigned int []){ 0x4c02c },
-	.cxc_count = 1,
-	.pd = {
-		.name = "venus_core0",
-	},
-	.flags = HW_CTRL,
-	.pwrsts = PWRSTS_OFF_ON,
-};
-
-static struct gdsc mdss_gdsc = {
-	.gdscr = 0x4d078,
-	.cxcs = (unsigned int []){ 0x4d080, 0x4d088 },
-	.cxc_count = 2,
-	.pd = {
-		.name = "mdss_gdsc",
-	},
-	.pwrsts = PWRSTS_OFF_ON,
-};
-
-static struct gdsc jpeg_gdsc = {
-	.gdscr = 0x5701c,
-	.cxcs = (unsigned int []){ 0x57020, 0x57028 },
-	.cxc_count = 2,
-	.pd = {
-		.name = "jpeg_gdsc",
-	},
-	.pwrsts = PWRSTS_OFF_ON,
-};
-
-static struct gdsc vfe0_gdsc = {
-	.gdscr = 0x58034,
-	.cxcs = (unsigned int []){ 0x58038, 0x58048, 0x5600c, 0x58050 },
-	.cxc_count = 4,
-	.pd = {
-		.name = "vfe0_gdsc",
-	},
-	.pwrsts = PWRSTS_OFF_ON,
-};
-
-static struct gdsc vfe1_gdsc = {
-	.gdscr = 0x5806c,
-	.cxcs = (unsigned int []){ 0x5805c, 0x58068, 0x5600c, 0x58074 },
-	.cxc_count = 4,
-	.pd = {
-		.name = "vfe1_gdsc",
-	},
-	.pwrsts = PWRSTS_OFF_ON,
-};
-
-static struct gdsc oxili_gx_gdsc = {
-	.gdscr = 0x5901c,
-	.clamp_io_ctrl = 0x5b00c,
-	.cxcs = (unsigned int []){ 0x59000, 0x59024 },
-	.cxc_count = 2,
-	.pd = {
-		.name = "oxili_gx_gdsc",
-	},
-	.pwrsts = PWRSTS_OFF_ON,
-	.flags = CLAMP_IO,
-};
-
-static struct gdsc oxili_cx_gdsc = {
-	.gdscr = 0x5904c,
-	.cxcs = (unsigned int []){ 0x59020 },
-	.cxc_count = 1,
-	.pd = {
-		.name = "oxili_cx_gdsc",
-	},
-	.pwrsts = PWRSTS_OFF_ON,
-};
-
-static struct gdsc cpp_gdsc = {
-	.gdscr = 0x58078,
-	.cxcs = (unsigned int []){ 0x5803c, 0x58064 },
-	.cxc_count = 2,
-	.pd = {
-		.name = "cpp_gdsc",
-	},
-	.flags = ALWAYS_ON,
-	.pwrsts = PWRSTS_OFF_ON,
-};
-
 static struct clk_regmap *gcc_msm8953_clocks[] = {
 	[GPLL0] = &gpll0.clkr,
 	[GPLL0_EARLY] = &gpll0_early.clkr,
@@ -4616,15 +4507,6 @@ static struct clk_regmap *gcc_msm8953_clocks[] = {
 	[GFX3D_CLK_SRC] = &gfx3d_clk_src.clkr,
 };
 
-static const struct qcom_reset_map gcc_msm8953_resets[] = {
-	[GCC_CAMSS_MICRO_BCR]	= { 0x56008 },
-	[GCC_MSS_BCR]		= { 0x71000 },
-	[GCC_QUSB2_PHY_BCR]	= { 0x4103c },
-	[GCC_USB3PHY_PHY_BCR]	= { 0x3f03c },
-	[GCC_USB3_PHY_BCR]	= { 0x3f034 },
-	[GCC_USB_30_BCR]	= { 0x3f070 },
-};
-
 static const struct regmap_config gcc_msm8953_regmap_config = {
 	.reg_bits	= 32,
 	.reg_stride	= 4,
@@ -4633,27 +4515,10 @@ static const struct regmap_config gcc_msm8953_regmap_config = {
 	.fast_io	= true,
 };
 
-static struct gdsc *gcc_msm8953_gdscs[] = {
-	[CPP_GDSC] = &cpp_gdsc,
-	[JPEG_GDSC] = &jpeg_gdsc,
-	[MDSS_GDSC] = &mdss_gdsc,
-	[OXILI_CX_GDSC] = &oxili_cx_gdsc,
-	[OXILI_GX_GDSC] = &oxili_gx_gdsc,
-	[USB30_GDSC] = &usb30_gdsc,
-	[VENUS_CORE0_GDSC] = &venus_core0_gdsc,
-	[VENUS_GDSC] = &venus_gdsc,
-	[VFE0_GDSC] = &vfe0_gdsc,
-	[VFE1_GDSC] = &vfe1_gdsc,
-};
-
 static const struct qcom_cc_desc gcc_msm8953_desc = {
 	.config = &gcc_msm8953_regmap_config,
 	.clks = gcc_msm8953_clocks,
 	.num_clks = ARRAY_SIZE(gcc_msm8953_clocks),
-	.resets = gcc_msm8953_resets,
-	.num_resets = ARRAY_SIZE(gcc_msm8953_resets),
-	.gdscs = gcc_msm8953_gdscs,
-	.num_gdscs = ARRAY_SIZE(gcc_msm8953_gdscs),
 };
 
 static int gcc_msm8953_probe(struct platform_device *pdev)
