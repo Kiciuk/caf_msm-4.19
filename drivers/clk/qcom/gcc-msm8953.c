@@ -18,6 +18,7 @@
 #include "clk-branch.h"
 #include "clk-rcg.h"
 #include "common.h"
+#include "reset.h"
 #include "vdd-level-msm8953.h"
 
 #define F_SLEW(f, s, h, m, n, sf) { (f), (s), (2 * (h) - 1), (m), (n), (sf) }
@@ -4508,6 +4509,15 @@ static struct clk_regmap *gcc_msm8953_clocks[] = {
 	[GFX3D_CLK_SRC] = &gfx3d_clk_src.clkr,
 };
 
+static const struct qcom_reset_map gcc_msm8953_resets[] = {
+	[GCC_CAMSS_MICRO_BCR]	= { 0x56008 },
+	[GCC_MSS_BCR]		= { 0x71000 },
+	[GCC_QUSB2_PHY_BCR]	= { 0x4103c },
+	[GCC_USB3PHY_PHY_BCR]	= { 0x3f03c },
+	[GCC_USB3_PHY_BCR]	= { 0x3f034 },
+	[GCC_USB_30_BCR]	= { 0x3f070 },
+};
+
 static const struct regmap_config gcc_msm8953_regmap_config = {
 	.reg_bits	= 32,
 	.reg_stride	= 4,
@@ -4520,6 +4530,8 @@ static const struct qcom_cc_desc gcc_msm8953_desc = {
 	.config = &gcc_msm8953_regmap_config,
 	.clks = gcc_msm8953_clocks,
 	.num_clks = ARRAY_SIZE(gcc_msm8953_clocks),
+	.resets = gcc_msm8953_resets,
+	.num_resets = ARRAY_SIZE(gcc_msm8953_resets),
 };
 
 static int gcc_msm8953_probe(struct platform_device *pdev)
